@@ -6,6 +6,8 @@ pipeline {
   }
 
   environment {
+    // Use double backslashes OR use forward slashes.
+    PYTHON_EXE = "C:\\Users\\vaishnavi.m\\AppData\\Local\\Programs\\Python\\Python314\\python.exe"
     VENV_DIR = ".venv"
     ALLURE_RESULTS = "reports\\allure-results"
     ALLURE_REPORT  = "reports\\allure-report"
@@ -21,10 +23,8 @@ pipeline {
     stage('Verify tools') {
       steps {
         bat '''
-          python --version
-          pip --version
-          where python
-          where pip
+          "%PYTHON_EXE%" --version
+          "%PYTHON_EXE%" -m pip --version
         '''
       }
     }
@@ -33,7 +33,7 @@ pipeline {
       steps {
         bat '''
           if exist %VENV_DIR% rmdir /s /q %VENV_DIR%
-          python -m venv %VENV_DIR%
+          "%PYTHON_EXE%" -m venv %VENV_DIR%
           call %VENV_DIR%\\Scripts\\activate.bat
           python -m pip install --upgrade pip
         '''
@@ -44,7 +44,7 @@ pipeline {
       steps {
         bat '''
           call %VENV_DIR%\\Scripts\\activate.bat
-          pip install -r requirements.txt
+          python -m pip install -r requirements.txt
         '''
       }
     }
@@ -53,7 +53,7 @@ pipeline {
       steps {
         bat '''
           call %VENV_DIR%\\Scripts\\activate.bat
-          pytest
+          python -m pytest
         '''
       }
     }
