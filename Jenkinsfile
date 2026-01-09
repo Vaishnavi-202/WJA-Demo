@@ -7,8 +7,8 @@ pipeline {
 
   environment {
     VENV_DIR = ".venv"
-    ALLURE_RESULTS = "reports/allure-results"
-    ALLURE_REPORT = "reports/allure-report"
+    ALLURE_RESULTS = "reports\\allure-results"
+    ALLURE_REPORT  = "reports\\allure-report"
   }
 
   stages {
@@ -18,12 +18,23 @@ pipeline {
       }
     }
 
-    stage('Set up Python venv') {
+    stage('Verify tools') {
       steps {
-        sh '''
-          python3 --version
-          python3 -m venv ${VENV_DIR}
-          . ${VENV_DIR}/bin/activate
+        bat '''
+          python --version
+          pip --version
+          where python
+          where pip
+        '''
+      }
+    }
+
+    stage('Set up venv') {
+      steps {
+        bat '''
+          if exist %VENV_DIR% rmdir /s /q %VENV_DIR%
+          python -m venv %VENV_DIR%
+          call %VENV_DIR%\\Scripts\\activate.bat
           python -m pip install --upgrade pip
         '''
       }
@@ -31,8 +42,8 @@ pipeline {
 
     stage('Install dependencies') {
       steps {
-        sh '''
-          . ${VENV_DIR}/bin/activate
+        bat '''
+          call %VENV_DIR%\\Scripts\\activate.bat
           pip install -r requirements.txt
         '''
       }
@@ -40,32 +51,38 @@ pipeline {
 
     stage('Run tests') {
       steps {
-        sh '''
-          . ${VENV_DIR}/bin/activate
+        bat '''
+          call %VENV_DIR%\\Scripts\\activate.bat
           pytest
         '''
       }
     }
 
-    stage('Install Allure CLI') {
+    stage('Install Allure CLI (Windows)') {
       steps {
-        sh '''
-          sudo apt-get update
-          sudo apt-get install -y default-jre curl tar
-          curl -fsSL -o allure.tgz https://github.com/allure-framework/allure2/releases/download/2.27.0/allure-2.27.0.tgz
-          tar -xzf allure.tgz
-          sudo rm -rf /opt/allure
-          sudo mv allure-2.27.0 /opt/allure
-          sudo ln -sf /opt/allure/bin/allure /usr/local/bin/allure
-          allure --version
+        bat '''
+          where allure >nul 2>nul
+          if %ERRORLEVEL%==0 (
+            echo Allure already installed
+            allure --version
+          ) else (
+            echo Allure not found. Installing via Scoop...
+            powershell -NoProfile -ExecutionPolicy Bypass -Command "if (-not (Get-Command scoop -ErrorAction SilentlyContinue)) { iwr -useb get.scoop.sh | iex }"
+            powershell -NoProfile -ExecutionPolicy Bypass -Command "scoop install allure"
+            allure --version
+          )
         '''
       }
     }
 
     stage('Generate Allure HTML') {
       steps {
-        sh '''
-          allure generate ${ALLURE_RESULTS} -o ${ALLURE_REPORT} --clean || true
+        bat '''
+          if not exist %ALLURE_RESULTS% (
+            echo Allure results folder not found: %ALLURE_RESULTS%
+            exit /b 0
+          )
+          allure generate %ALLURE_RESULTS% -o %ALLURE_REPORT% --clean
         '''
       }
     }
@@ -73,8 +90,7 @@ pipeline {
 
   post {
     always {
-      archiveArtifacts artifacts: 'reports/allure-results/**', allowEmptyArchive: true
-      archiveArtifacts artifacts: 'reports/allure-report/**', allowEmptyArchive: true
+      archiveArtifacts artifacts: 'reports/**', allowEmptyArchive: true
     }
   }
 }
