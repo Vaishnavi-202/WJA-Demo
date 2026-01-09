@@ -9,7 +9,6 @@ pipeline {
     PYTHON_EXE = "C:\\Users\\vaishnavi.m\\AppData\\Local\\Programs\\Python\\Python314\\python.exe"
     VENV_DIR = ".venv"
     ALLURE_RESULTS = "reports\\allure-results"
-    ALLURE_REPORT  = "reports\\allure-report"
   }
 
   stages {
@@ -24,17 +23,6 @@ pipeline {
         bat '''
           "%PYTHON_EXE%" --version
           "%PYTHON_EXE%" -m pip --version
-        '''
-      }
-    }
-
-    stage('Verify Node') {
-      steps {
-        bat '''
-          where node
-          where npm
-          node -v
-          npm -v
         '''
       }
     }
@@ -63,48 +51,9 @@ pipeline {
       steps {
         bat '''
           call %VENV_DIR%\\Scripts\\activate.bat
-          python -m pytest
+          if exist %ALLURE_RESULTS% rmdir /s /q %ALLURE_RESULTS%
+          python -m pytest --alluredir=%ALLURE_RESULTS%
         '''
-      }
-    }
-
-    stage('Install Allure CLI (npm)') {
-      steps {
-        bat '''
-          where allure >nul 2>nul
-          if %ERRORLEVEL%==0 (
-            echo Allure already installed
-            allure --version
-          ) else (
-            echo Installing Allure via npm...
-            npm install -g allure-commandline
-            where allure
-            allure --version
-          )
-        '''
-      }
-    }
-
-    stage('Generate Allure HTML (npx)') {
-      steps {
-      bat '''
-        if not exist %ALLURE_RESULTS% (
-          echo Allure results folder not found: %ALLURE_RESULTS%
-          exit /b 0
-        )
-  
-        rem Create a minimal package.json only if missing
-        if not exist package.json (
-          npm init -y >nul 2>nul
-        )
-  
-        rem Install allure locally in the workspace (no global PATH needed)
-        npm install allure-commandline --no-fund --no-audit
-  
-        rem Run allure via npx
-        npx allure --version
-        npx allure generate %ALLURE_RESULTS% -o %ALLURE_REPORT% --clean
-      '''
       }
     }
   }
