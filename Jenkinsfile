@@ -85,15 +85,26 @@ pipeline {
       }
     }
 
-    stage('Generate Allure HTML') {
+    stage('Generate Allure HTML (npx)') {
       steps {
-        bat '''
-          if not exist %ALLURE_RESULTS% (
-            echo Allure results folder not found: %ALLURE_RESULTS%
-            exit /b 0
-          )
-          allure generate %ALLURE_RESULTS% -o %ALLURE_REPORT% --clean
-        '''
+      bat '''
+        if not exist %ALLURE_RESULTS% (
+          echo Allure results folder not found: %ALLURE_RESULTS%
+          exit /b 0
+        )
+  
+        rem Create a minimal package.json only if missing
+        if not exist package.json (
+          npm init -y >nul 2>nul
+        )
+  
+        rem Install allure locally in the workspace (no global PATH needed)
+        npm install allure-commandline --no-fund --no-audit
+  
+        rem Run allure via npx
+        npx allure --version
+        npx allure generate %ALLURE_RESULTS% -o %ALLURE_REPORT% --clean
+      '''
       }
     }
   }
