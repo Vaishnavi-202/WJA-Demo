@@ -6,7 +6,6 @@ pipeline {
   }
 
   environment {
-    // Use double backslashes OR use forward slashes.
     PYTHON_EXE = "C:\\Users\\vaishnavi.m\\AppData\\Local\\Programs\\Python\\Python314\\python.exe"
     VENV_DIR = ".venv"
     ALLURE_RESULTS = "reports\\allure-results"
@@ -25,6 +24,17 @@ pipeline {
         bat '''
           "%PYTHON_EXE%" --version
           "%PYTHON_EXE%" -m pip --version
+        '''
+      }
+    }
+
+    stage('Verify Node') {
+      steps {
+        bat '''
+          where node
+          where npm
+          node -v
+          npm -v
         '''
       }
     }
@@ -58,7 +68,7 @@ pipeline {
       }
     }
 
-    stage('Install Allure CLI (Windows)') {
+    stage('Install Allure CLI (npm)') {
       steps {
         bat '''
           where allure >nul 2>nul
@@ -66,9 +76,9 @@ pipeline {
             echo Allure already installed
             allure --version
           ) else (
-            echo Allure not found. Installing via Scoop...
-            powershell -NoProfile -ExecutionPolicy Bypass -Command "if (-not (Get-Command scoop -ErrorAction SilentlyContinue)) { iwr -useb get.scoop.sh | iex }"
-            powershell -NoProfile -ExecutionPolicy Bypass -Command "scoop install allure"
+            echo Installing Allure via npm...
+            npm install -g allure-commandline
+            where allure
             allure --version
           )
         '''
